@@ -7,6 +7,7 @@ import {CropDetector} from './detector/crop-detector.js';
 import {Compiler} from './compiler.js';
 import {InputLoader} from './input-loader.js';
 import {OneEuroFilter} from '../libs/one-euro-filter.js';
+import { SmoothDampFilter } from './three.js';
 
 const DEFAULT_FILTER_CUTOFF = 0.001; // 1Hz. time period in milliseconds
 const DEFAULT_FILTER_BETA = 1000;
@@ -14,17 +15,26 @@ const DEFAULT_WARMUP_TOLERANCE = 5;
 const DEFAULT_MISS_TOLERANCE = 5;
 
 const DEFAULT_FILTER={filter:OneEuroFilter,opts:{minCutOff: DEFAULT_FILTER_CUTOFF, beta: DEFAULT_FILTER_BETA}}; //old settings from One Euro Filter
+const SMOOTH_DAMP_FILTER= { filter: SmoothDampFilter, opts: {}}; 
 
 class Controller {
   constructor({ inputWidth, inputHeight, onUpdate = null, debugMode = false, maxTrack = 1,
-    warmupTolerance = null, missTolerance = null, customFilter=null}) {
+    warmupTolerance = null, missTolerance = null, customFilter=null, useSmoothDamp=false}) {
 
     this.inputWidth = inputWidth;
     this.inputHeight = inputHeight;
     this.maxTrack = maxTrack;
-    this.customFilter=customFilter===null?DEFAULT_FILTER:customFilter;
-    if(!this.customFilter.hasOwnProperty("filter")) customFilter.filter=DEFAULT_FILTER.filter;
-    if(!this.customFilter.hasOwnProperty("opts")) customFilter.opts={}
+    this.useSmoothDamp = useSmoothDamp;
+    
+    if (this.useSmoothDamp) {
+      this.customFilter = SMOOTH_DAMP_FILTER;
+    } else {
+      this.customFilter = customFilter === null ? DEFAULT_FILTER : customFilter;
+    }
+    if (!this.customFilter.hasOwnProperty("filter")) { customFilter.filter = DEFAULT_FILTER.filter; }
+    if (!this.customFilter.hasOwnProperty("opts")) { customFilter.opts = {}; }
+
+
     this.warmupTolerance = warmupTolerance === null ? DEFAULT_WARMUP_TOLERANCE : warmupTolerance;
     this.missTolerance = missTolerance === null ? DEFAULT_MISS_TOLERANCE : missTolerance;
     this.cropDetector = new CropDetector(this.inputWidth, this.inputHeight, debugMode);

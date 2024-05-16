@@ -3,7 +3,8 @@ import {opencv, waitCV} from "../libs/opencv-helper.js";
 import {Estimator} from "./face-geometry/estimator.js";
 import {createThreeFaceGeometry as  _createThreeFaceGeometry} from "./face-geometry/face-geometry.js";
 import {positions as canonicalMetricLandmarks} from "./face-geometry/face-data.js";
-import {OneEuroFilter} from '../libs/one-euro-filter.js';
+// import {OneEuroFilter} from '../libs/one-euro-filter.js';
+// import { SmoothDampFilter } from '../libs/smooth-damp-filter.js'
 
 const DEFAULT_FILTER_CUTOFF = 0.001; // 1Hz. time period in milliseconds
 const DEFAULT_FILTER_BETA = 1;

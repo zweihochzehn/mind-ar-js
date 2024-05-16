@@ -1,6 +1,6 @@
 import { Matrix4, Vector3, Quaternion, Scene, WebGLRenderer, PerspectiveCamera, Group, sRGBEncoding } from "three";
 import * as tf from '@tensorflow/tfjs';
-import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js'
+import { CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 import { Controller } from "./controller.js";
 import { UI } from "../ui/ui.js";
 import { FilterInterface } from '../libs/filter-interface.js';
@@ -18,13 +18,14 @@ export class MindARThree {
   constructor({
     container, imageTargetSrc, maxTrack, uiLoading = "yes", uiScanning = "yes", uiError = "yes",
     filterMinCF = null, filterBeta = null, warmupTolerance = null, missTolerance = null, customFilter = null,
-    userDeviceId = null, environmentDeviceId = null
+    userDeviceId = null, environmentDeviceId = null, useSmoothDamp = false
   }) {
     this.container = container;
     this.imageTargetSrc = imageTargetSrc;
     this.maxTrack = maxTrack;
     this.filterMinCF = filterMinCF;
     this.filterBeta = filterBeta;
+    this.useSmoothDamp = useSmoothDamp;
     this.customFilter = customFilter;
     this.warmupTolerance = warmupTolerance;
     this.missTolerance = missTolerance;
@@ -158,6 +159,7 @@ export class MindARThree {
         warmupTolerance: this.warmupTolerance,
         missTolerance: this.missTolerance,
         maxTrack: this.maxTrack,
+        useSmoothDamp: this.useSmoothDamp,
         onUpdate: (data) => {
           if (data.type === 'updateMatrix') {
             const { targetIndex, worldMatrix } = data;

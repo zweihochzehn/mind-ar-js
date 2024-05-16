@@ -13,7 +13,7 @@ AFRAME.registerSystem('mindar-image-system', {
   tick: function() {
   },
 
-  setup: function({imageTargetSrc, maxTrack, showStats, uiLoading, uiScanning, uiError, missTolerance, warmupTolerance, filterMinCF, filterBeta}) {
+  setup: function({imageTargetSrc, maxTrack, showStats, uiLoading, uiScanning, uiError, missTolerance, warmupTolerance, filterMinCF, filterBeta, useSmoothDamp}) {
     this.imageTargetSrc = imageTargetSrc;
     this.maxTrack = maxTrack;
     this.filterMinCF = filterMinCF;
@@ -22,6 +22,7 @@ AFRAME.registerSystem('mindar-image-system', {
     this.warmupTolerance = warmupTolerance;
     this.showStats = showStats;
     this.ui = new UI({uiLoading, uiScanning, uiError});
+    this.useSmoothDamp = useSmoothDamp;
   },
 
   registerAnchor: function(el, targetIndex) {
@@ -91,7 +92,7 @@ AFRAME.registerSystem('mindar-image-system', {
       facingMode: 'environment',
     }}).then((stream) => {
       this.video.addEventListener( 'loadedmetadata', () => {
-        //console.log("video ready...", this.video);
+//        console.log("video ready...", this.video);
         this.video.setAttribute('width', this.video.videoWidth);
         this.video.setAttribute('height', this.video.videoHeight);
         this._startAR();
@@ -108,10 +109,12 @@ AFRAME.registerSystem('mindar-image-system', {
     const container = this.container;
     const minCutOff=this.filterMinCF;
     const beta=this.filterBeta;
+    const useSmoothDamp=this.useSmoothDamp;
     this.controller = new Controller({
       inputWidth: video.videoWidth,
       inputHeight: video.videoHeight,
       maxTrack: this.maxTrack, 
+      useSmoothDamp,
       customFilter:{
         opts:{
           minCutOff,
@@ -210,6 +213,7 @@ AFRAME.registerComponent('mindar-image', {
   schema: {
     imageTargetSrc: {type: 'string'},
     maxTrack: {type: 'int', default: 1},
+    useSmoothDamp: {type: 'boolean', default: false},
     filterMinCF: {type: 'number', default: -1},
     filterBeta: {type: 'number', default: -1},
     missTolerance: {type: 'int', default: -1},
@@ -220,10 +224,9 @@ AFRAME.registerComponent('mindar-image', {
     uiScanning: {type: 'string', default: 'yes'},
     uiError: {type: 'string', default: 'yes'},
   },
-
+  
   init: function() {
     const arSystem = this.el.sceneEl.systems['mindar-image-system'];
-
     arSystem.setup({
       imageTargetSrc: this.data.imageTargetSrc, 
       maxTrack: this.data.maxTrack,
@@ -231,10 +234,12 @@ AFRAME.registerComponent('mindar-image', {
       filterBeta: this.data.filterBeta === -1? null: this.data.filterBeta,
       missTolerance: this.data.missTolerance === -1? null: this.data.missTolerance,
       warmupTolerance: this.data.warmupTolerance === -1? null: this.data.warmupTolerance,
+      customFilter: this.data.customFilter,
       showStats: this.data.showStats,
       uiLoading: this.data.uiLoading,
       uiScanning: this.data.uiScanning,
       uiError: this.data.uiError,
+      useSmoothDamp: this.data.useSmoothDamp,
     });
     if (this.data.autoStart) {
       this.el.sceneEl.addEventListener('renderstart', () => {
