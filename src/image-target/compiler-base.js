@@ -1,8 +1,8 @@
-import { Detector } from './detector/detector.js';
-import { buildImageList, buildTrackingImageList } from './image-list.js';
-import { build as hierarchicalClusteringBuild } from './matching/hierarchical-clustering.js';
-import * as msgpack from '@msgpack/msgpack';
-import * as tf from '@tensorflow/tfjs';
+import * as msgpack from "@msgpack/msgpack";
+import * as tf from "@tensorflow/tfjs";
+import { Detector } from "./detector/detector.js";
+import { buildImageList, buildTrackingImageList } from "./image-list.js";
+import { build as hierarchicalClusteringBuild } from "./matching/hierarchical-clustering.js";
 
 // TODO: better compression method. now grey image saved in pixels, which could be larger than original image
 
@@ -10,7 +10,7 @@ const CURRENT_VERSION = 2;
 
 class CompilerBase {
   constructor() {
-    this.data = null;
+    this.data = [];
   }
 
   // input html Images
@@ -20,17 +20,31 @@ class CompilerBase {
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
         const processCanvas = this.createProcessCanvas(img);
-        const processContext = processCanvas.getContext('2d');
+        const processContext = processCanvas.getContext("2d");
         processContext.drawImage(img, 0, 0, img.width, img.height);
-        const processData = processContext.getImageData(0, 0, img.width, img.height);
+        const processData = processContext.getImageData(
+          0,
+          0,
+          img.width,
+          img.height
+        );
 
         const greyImageData = new Uint8Array(img.width * img.height);
 
         for (let i = 0; i < greyImageData.length; i++) {
           const offset = i * 4;
-          greyImageData[i] = Math.floor((processData.data[offset] + processData.data[offset + 1] + processData.data[offset + 2]) / 3);
+          greyImageData[i] = Math.floor(
+            (processData.data[offset] +
+              processData.data[offset + 1] +
+              processData.data[offset + 2]) /
+              3
+          );
         }
-        const targetImage = { data: greyImageData, height: img.height, width: img.width };
+        const targetImage = {
+          data: greyImageData,
+          height: img.height,
+          width: img.width,
+        };
         targetImages.push(targetImage);
       }
 
@@ -49,7 +63,7 @@ class CompilerBase {
         this.data.push({
           targetImage: targetImage,
           imageList: imageList,
-          matchingData: matchingData
+          matchingData: matchingData,
         });
       }
 
@@ -58,7 +72,11 @@ class CompilerBase {
         this.data[i].trackingImageList = trackingImageList;
       }
 
-      const trackingDataList = await this.compileTrack({progressCallback, targetImages, basePercent: 50});
+      const trackingDataList = await this.compileTrack({
+        progressCallback,
+        targetImages,
+        basePercent: 50,
+      });
 
       for (let i = 0; i < targetImages.length; i++) {
         this.data[i].trackingData = trackingDataList[i];
@@ -78,13 +96,34 @@ class CompilerBase {
           height: this.data[i].targetImage.height,
         },
         trackingData: this.data[i].trackingData,
-        matchingData: this.data[i].matchingData
+        matchingData: this.data[i].matchingData,
       });
     }
     const buffer = msgpack.encode({
       v: CURRENT_VERSION,
-      dataList
+      dataList,
     });
+    return buffer;
+  }
+
+  exportDataAndClear() {
+    const dataList = [];
+    for (let i = 0; i < this.data.length; i++) {
+      dataList.push({
+        //targetImage: this.data[i].targetImage,
+        targetImage: {
+          width: this.data[i].targetImage.width,
+          height: this.data[i].targetImage.height,
+        },
+        trackingData: this.data[i].trackingData,
+        matchingData: this.data[i].matchingData,
+      });
+    }
+    const buffer = msgpack.encode({
+      v: CURRENT_VERSION,
+      dataList,
+    });
+    this.data = [];
     return buffer;
   }
 
@@ -102,7 +141,26 @@ class CompilerBase {
       this.data.push({
         targetImage: dataList[i].targetImage,
         trackingData: dataList[i].trackingData,
-        matchingData: dataList[i].matchingData
+        matchingData: dataList[i].matchingData,
+      });
+    }
+    return this.data;
+  }
+
+  importDataContinuous(buffer) {
+    const content = msgpack.decode(new Uint8Array(buffer));
+    //console.log("import", content);
+
+    if (!content.v || content.v !== CURRENT_VERSION) {
+      console.error("Your compiled .mind might be outdated. Please recompile");
+      return [];
+    }
+    const { dataList } = content;
+    for (let i = 0; i < dataList.length; i++) {
+      this.data.push({
+        targetImage: dataList[i].targetImage,
+        trackingData: dataList[i].trackingData,
+        matchingData: dataList[i].matchingData,
       });
     }
     return this.data;
@@ -113,7 +171,7 @@ class CompilerBase {
     console.warn("missing createProcessCanvas implementation");
   }
 
-  compileTrack({progressCallback, targetImages, basePercent}) {
+  compileTrack({ progressCallback, targetImages, basePercent }) {
     // sub-class implements
     console.warn("missing compileTrack implementation");
   }
@@ -129,14 +187,20 @@ const _extractMatchingFeatures = async (imageList, doneCallback) => {
     await tf.nextFrame();
     tf.tidy(() => {
       //const inputT = tf.tensor(image.data, [image.data.length]).reshape([image.height, image.width]);
-      const inputT = tf.tensor(image.data, [image.data.length], 'float32').reshape([image.height, image.width]);
+      const inputT = tf
+        .tensor(image.data, [image.data.length], "float32")
+        .reshape([image.height, image.width]);
       //const ps = detector.detectImageData(image.data);
       const { featurePoints: ps } = detector.detect(inputT);
 
       const maximaPoints = ps.filter((p) => p.maxima);
       const minimaPoints = ps.filter((p) => !p.maxima);
-      const maximaPointsCluster = hierarchicalClusteringBuild({ points: maximaPoints });
-      const minimaPointsCluster = hierarchicalClusteringBuild({ points: minimaPoints });
+      const maximaPointsCluster = hierarchicalClusteringBuild({
+        points: maximaPoints,
+      });
+      const minimaPointsCluster = hierarchicalClusteringBuild({
+        points: minimaPoints,
+      });
 
       keyframes.push({
         maximaPoints,
@@ -145,14 +209,12 @@ const _extractMatchingFeatures = async (imageList, doneCallback) => {
         minimaPointsCluster,
         width: image.width,
         height: image.height,
-        scale: image.scale
+        scale: image.scale,
       });
       doneCallback(i);
     });
   }
   return keyframes;
-}
+};
 
-export {
-  CompilerBase
-}
+export { CompilerBase };
