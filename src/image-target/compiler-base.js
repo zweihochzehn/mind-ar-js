@@ -106,6 +106,7 @@ class CompilerBase {
     return buffer;
   }
 
+  // used to export data and clear it afterwards to combine marker data imported with importDataContinuous()
   exportDataAndClear() {
     const dataList = [];
     for (let i = 0; i < this.data.length; i++) {
@@ -147,6 +148,7 @@ class CompilerBase {
     return this.data;
   }
 
+  // used to import data and combine with existing data
   importDataContinuous(buffer) {
     const content = msgpack.decode(new Uint8Array(buffer));
     //console.log("import", content);
